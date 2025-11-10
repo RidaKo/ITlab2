@@ -1,0 +1,261 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "$id": "https://example.org/gym/1.0/program-library.schema.json",
+  "title": "Program Library (Gym 1.0)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["programLibrary"],
+  "properties": {
+    "programLibrary": {
+      "$ref": "#/definitions/ProgramLibrary"
+    }
+  },
+  "definitions": {
+    "Id": {
+      "type": "string",
+      "pattern": "^ex\\.[a-z]+(\\.[a-z]+)*$"
+    },
+    "ProgramId": {
+      "type": "string",
+      "pattern": "^prog\\.[A-Za-z0-9]+(\\.[A-Za-z0-9]+)*$"
+    },
+    "NonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Tempo": {
+      "type": "string",
+      "pattern": "^[0-9]+-[0-9]+-[0-9]+$"
+    },
+    "Focus": {
+      "type": "string",
+      "enum": ["Lower", "Upper", "Full"]
+    },
+    "Level": {
+      "type": "string",
+      "enum": ["beginner", "intermediate", "advanced"]
+    },
+    "IntensityType": {
+      "type": "string",
+      "enum": ["percent_1RM", "absolute", "RPE"]
+    },
+    "UnitValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit", "value"],
+      "properties": {
+        "unit": { "type": "string", "minLength": 1 },
+        "value": { "type": ["string", "number"] }
+      }
+    },
+    "Author": {
+      "allOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "properties": {
+            "role": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "ExerciseDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "primaryMuscle", "secondaryMuscle", "equipment", "movementPattern"],
+      "properties": {
+        "id": { "$ref": "#/definitions/Id" },
+        "name": { "$ref": "#/definitions/NonEmptyString" },
+        "primaryMuscle": { "type": "string" },
+        "secondaryMuscle": { "type": "string" },
+        "equipment": { "$ref": "#/definitions/NonEmptyString" },
+        "movementPattern": { "$ref": "#/definitions/NonEmptyString" }
+      }
+    },
+    "ExerciseRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["idref"],
+      "properties": {
+        "idref": { "$ref": "#/definitions/Id" }
+      }
+    },
+    "Set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "reps", "restSeconds"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 1 },
+        "reps": { "type": "integer", "minimum": 1 },
+        "tempo": { "$ref": "#/definitions/Tempo" },
+        "restSeconds": {
+          "allOf": [
+            { "$ref": "#/definitions/UnitValue" },
+            {
+              "properties": {
+                "unit": { "const": "s" },
+                "value": { "type": "integer", "minimum": 0, "maximum": 7200 }
+              }
+            }
+          ]
+        },
+        "loadPercent": { "type": "number", "minimum": 0, "maximum": 2 },
+        "rpe": { "type": "number", "minimum": 1, "maximum": 10 }
+      },
+      "oneOf": [
+        { "required": ["loadPercent"], "not": { "required": ["rpe"] } },
+        { "required": ["rpe"], "not": { "required": ["loadPercent"] } }
+      ]
+    },
+    "Scheme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sets"],
+      "properties": {
+        "sets": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/Set" }
+        }
+      }
+    },
+    "Block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "exerciseRef", "scheme"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["main", "accessory", "warmup"] },
+        "exerciseRef": { "$ref": "#/definitions/ExerciseRef" },
+        "scheme": { "$ref": "#/definitions/Scheme" },
+        "notes": { "type": "string" }
+      }
+    },
+    "Day": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "focus", "blocks"],
+      "properties": {
+        "name": { "$ref": "#/definitions/NonEmptyString" },
+        "focus": { "$ref": "#/definitions/Focus" },
+        "blocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/Block" }
+        },
+        "summary": { "type": "string" }
+      }
+    },
+    "Week": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "days"],
+      "properties": {
+        "number": { "type": "integer", "minimum": 1 },
+        "days": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 7,
+          "items": { "$ref": "#/definitions/Day" }
+        }
+      }
+    },
+    "Weeks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/Week" }
+    },
+    "Parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["load", "rest", "intensityType"],
+      "properties": {
+        "load": {
+          "allOf": [
+            { "$ref": "#/definitions/UnitValue" },
+            {
+              "properties": {
+                "unit": { "enum": ["kg", "lb"] },
+                "value": {
+                  "anyOf": [
+                    { "type": "string", "enum": ["default"] },
+                    { "type": "number", "minimum": 0 }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "rest": {
+          "allOf": [
+            { "$ref": "#/definitions/UnitValue" },
+            {
+              "properties": {
+                "unit": { "const": "s" },
+                "value": {
+                  "anyOf": [
+                    { "type": "string", "enum": ["standard"] },
+                    { "type": "integer", "minimum": 0, "maximum": 7200 }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "intensityType": { "$ref": "#/definitions/IntensityType" }
+      }
+    },
+    "Metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "author", "created", "version", "target", "phase"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "author": { "type": "string", "minLength": 1 },
+        "created": { "type": "string", "format": "date" },
+        "version": { "type": "number", "minimum": 0 },
+        "target": { "type": "string", "minLength": 1 },
+        "phase": { "type": "string", "minLength": 1 }
+      }
+    },
+    "Scheduling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["startDate", "daysPerWeek"],
+      "properties": {
+        "startDate": { "type": "string", "format": "date" },
+        "daysPerWeek": { "type": "integer", "minimum": 1, "maximum": 7 }
+      }
+    },
+    "Program": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "level", "metadata", "parameters", "weeks", "scheduling"],
+      "properties": {
+        "id": { "$ref": "#/definitions/ProgramId" },
+        "level": { "$ref": "#/definitions/Level" },
+        "metadata": { "$ref": "#/definitions/Metadata" },
+        "parameters": { "$ref": "#/definitions/Parameters" },
+        "weeks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/Week" }
+        },
+        "scheduling": { "$ref": "#/definitions/Scheduling" }
+      }
+    },
+    "ProgramLibrary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exerciseDefs", "program"],
+      "properties": {
+        "exerciseDefs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/ExerciseDef" }
+        },
+        "program": { "$ref": "#/definitions/Program" }
+      }
+    }
+  }
+}

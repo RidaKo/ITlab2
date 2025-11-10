@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  - custom simple types with restriction (e.g., NonEmptyString, TempoType, IdType)
+  - a meaningful list type (MuscleListType) used as an optional element
+  - complex types with simple content: derived by restriction (DurationSecondsType, LoadParamType, RestParamType)
+  - complex types with simple content: derived by extension (AuthorType)
+  - complex types with complex content: derived by restriction (ProgramType from ProgramBaseType)
+  - complex types with complex content: derived by extension (DayTypeExt from DayTypeBase)
+  - a complex type with mixed content (NotesType) used by <notes>
+  - choice compositor inside SetType (load-percent OR rpe)
+  - key/keyref: exercise-def/@id unique and exercise-ref/@idref must reference it
+  - all custom types belong to the target namespace
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="https://example.org/gym/1.0"
+           xmlns="https://example.org/gym/1.0"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <!-- =====================
+       SIMPLE TYPES (restriction)
+       ===================== -->
+  <xs:simpleType name="NonEmptyString">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="TempoType">
+    <xs:restriction base="xs:string">
+      <!-- e.g., 3-0-1 -->
+      <xs:pattern value="\d+\-\d+\-\d+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="IdType">
+    <xs:restriction base="xs:string">
+      <!-- ex.back.squat, ex.bp, etc. -->
+      <xs:pattern value="ex\.[a-z]+(\.[a-z]+)*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ProgramIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="prog\.[A-Za-z0-9]+(\.[A-Za-z0-9]+)*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="FocusType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Lower"/>
+      <xs:enumeration value="Upper"/>
+      <xs:enumeration value="Full"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="LevelType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="beginner"/>
+      <xs:enumeration value="intermediate"/>
+      <xs:enumeration value="advanced"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="IntensityType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="percent_1RM"/>
+      <xs:enumeration value="absolute"/>
+      <xs:enumeration value="RPE"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="MuscleEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Quadriceps"/>
+      <xs:enumeration value="Glutes"/>
+      <xs:enumeration value="Pectorals"/>
+      <xs:enumeration value="Triceps"/>
+      <xs:enumeration value="Latissimus Dorsi"/>
+      <xs:enumeration value="Rhomboids"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Meaningful list type: list of known muscles -->
+  <xs:simpleType name="MuscleListType">
+    <xs:list itemType="MuscleEnum"/>
+  </xs:simpleType>
+
+  <!-- =====================
+       COMPLEX TYPES (simple content)
+       ===================== -->
+  <xs:simpleType name="NonNegativeInt">
+    <xs:restriction base="xs:int">
+      <xs:minInclusive value="0"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Base type with simple content + unit attribute using extension -->
+  <xs:complexType name="IntWithUnitType">
+    <xs:simpleContent>
+      <xs:extension base="NonNegativeInt">
+        <xs:attribute name="unit" type="NonEmptyString" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- Derived by restriction -->
+   <xs:complexType name="DurationSecondsType">
+    <xs:simpleContent>
+      <xs:restriction base="IntWithUnitType">
+        <xs:attribute name="unit" use="required">
+          <xs:simpleType>
+            <xs:restriction base="NonEmptyString">
+              <xs:enumeration value="s"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:attribute>
+      </xs:restriction>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- Derived by restriction from our own base (load param) -->
+ <xs:complexType name="LoadParamType">
+    <xs:simpleContent>
+      <xs:restriction base="IntWithUnitType">
+        <xs:attribute name="unit" use="required">
+          <xs:simpleType>
+            <xs:restriction base="NonEmptyString">
+              <xs:enumeration value="kg"/>
+              <xs:enumeration value="lb"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:attribute>
+      </xs:restriction>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- Derived by restriction from our own base (rest param) -->
+   <xs:complexType name="RestParamType">
+    <xs:simpleContent>
+      <xs:extension base="DurationSecondsType"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- Derived by extension from our base (adds an optional attribute) -->
+  <xs:complexType name="AuthorType">
+    <xs:simpleContent>
+      <xs:extension base="NonEmptyString">
+        <xs:attribute name="role" type="NonEmptyString" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- =====================
+       COMPLEX TYPES (complex content)
+       ===================== -->
+  <!-- Mixed content type for notes -->
+  <xs:complexType name="NotesType" mixed="true">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="em" type="NonEmptyString"/>
+      <xs:element name="code" type="NonEmptyString"/>
+    </xs:choice>
+  </xs:complexType>
+  
+  
+  <xs:complexType name="ExerciseDefType">
+    <xs:sequence>
+      <xs:element name="name" type="NonEmptyString"/>
+      <xs:element name="primary-muscle" type="MuscleEnum"/>
+      <xs:element name="secondary-muscle" type="MuscleEnum"/>
+      <xs:element name="equipment" type="NonEmptyString"/>
+      <xs:element name="movement-pattern" type="NonEmptyString"/>
+      <!-- usage of a list type -->
+      <xs:element name="alt-muscles" type="MuscleListType" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="IdType" use="required"/>
+  </xs:complexType>
+
+  <!-- scheme/set types -->
+  <xs:complexType name="SetType">
+    <xs:sequence>
+      <xs:element name="reps" type="xs:positiveInteger"/>
+      <!-- choice: either load-percent OR rpe -->
+      <xs:choice>
+        <xs:element name="load-percent" type="xs:decimal"/>
+        <xs:element name="rpe" type="xs:decimal"/>
+      </xs:choice>
+      <xs:element name="tempo" type="TempoType" minOccurs="0"/>
+      <xs:element name="rest-seconds" type="DurationSecondsType"/>
+    </xs:sequence>
+    <xs:attribute name="index" type="xs:positiveInteger" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="SchemeType">
+    <xs:sequence>
+      <xs:element name="set" type="SetType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Block type (with optional notes) -->
+  <xs:complexType name="BlockType">
+    <xs:sequence>
+      <xs:element name="exercise-ref">
+        <xs:complexType>
+          <xs:attribute name="idref" type="IdType" use="required"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="scheme" type="SchemeType"/>
+      <xs:element name="notes" type="NotesType" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="kind" use="required">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="main"/>
+          <xs:enumeration value="accessory"/>
+          <xs:enumeration value="warmup"/>
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+
+  <!-- Day base (complex content) -->
+  <xs:complexType name="DayTypeBase">
+    <xs:sequence>
+      <xs:element name="block" type="BlockType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="NonEmptyString" use="required"/>
+    <xs:attribute name="focus" type="FocusType" use="required"/>
+  </xs:complexType>
+
+  <!-- Derived by extension (optional summary at the end) -->
+  <xs:complexType name="DayTypeExt">
+    <xs:complexContent>
+      <xs:extension base="DayTypeBase">
+        <xs:sequence>
+          <xs:element name="summary" type="NonEmptyString" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <!-- Week types: show restriction principle by removing an optional element -->
+  <xs:complexType name="WeekBaseType">
+    <xs:sequence>
+      <xs:element name="day" type="DayTypeExt" minOccurs="1" maxOccurs="7"/>
+      <!-- optional extras that we'll restrict away -->
+      <xs:element name="extras" type="NonEmptyString" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="number" type="xs:positiveInteger" use="required"/>
+  </xs:complexType>
+
+  <!-- Derived by restriction: prohibit 'extras' by removing it -->
+  <xs:complexType name="WeekType">
+    <xs:complexContent>
+      <xs:restriction base="WeekBaseType">
+        <xs:sequence>
+          <xs:element name="day" type="DayTypeExt" minOccurs="1" maxOccurs="7"/>
+        </xs:sequence>
+        <xs:attribute name="number" type="xs:positiveInteger" use="required"/>
+      </xs:restriction>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="WeeksType">
+    <xs:sequence>
+      <xs:element name="week" type="WeekType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ParametersType">
+    <xs:sequence>
+      <xs:element name="load" type="LoadParamType"/>
+      <xs:element name="rest" type="RestParamType"/>
+      <xs:element name="intensity-type" type="IntensityType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Metadata -->
+  <xs:complexType name="MetadataType">
+    <xs:sequence>
+      <xs:element name="title">
+        <xs:simpleType>
+          <!-- restriction example on NonEmptyString -->
+          <xs:restriction base="NonEmptyString">
+            <xs:maxLength value="64"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="author" type="AuthorType"/>
+      <xs:element name="created" type="xs:date"/>
+      <xs:element name="version" type="xs:decimal"/>
+      <xs:element name="target" type="NonEmptyString"/>
+      <xs:element name="phase" type="NonEmptyString"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Program: derived by restriction from a base that allowed an extra element -->
+  <xs:complexType name="ProgramBaseType">
+    <xs:sequence>
+      <xs:element name="metadata" type="MetadataType"/>
+      <xs:element name="parameters" type="ParametersType"/>
+      <xs:element name="weeks" type="WeeksType"/>
+      <xs:element name="scheduling" type="SchedulingType"/>
+      <!-- optional extra that gets restricted out -->
+      <xs:element name="notes" type="NotesType" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="ProgramIdType" use="required"/>
+    <xs:attribute name="level" type="LevelType" use="required"/>
+  </xs:complexType>
+  
+  <xs:complexType name="SchedulingType">
+    <xs:sequence>
+      <xs:element name="start-date" type="xs:date"/>
+      <xs:element name="days-per-week" type="xs:positiveInteger"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ProgramType">
+    <xs:complexContent>
+      <xs:restriction base="ProgramBaseType">
+        <xs:sequence>
+          <xs:element name="metadata" type="MetadataType"/>
+          <xs:element name="parameters" type="ParametersType"/>
+          <xs:element name="weeks" type="WeeksType"/>
+          <xs:element name="scheduling">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="start-date" type="xs:date"/>
+                <xs:element name="days-per-week" type="xs:positiveInteger"/>
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+        </xs:sequence>
+        <xs:attribute name="id" type="ProgramIdType" use="required"/>
+        <xs:attribute name="level" type="LevelType" use="required"/>
+      </xs:restriction>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <!-- root -->
+  <xs:element name="program-library" type="ProgramLib">
+    <!-- Identity constraints -->
+    <!-- Every exercise-def/@id is unique -->
+    <xs:unique name="uniqueExerciseId">
+      <xs:selector xpath="exercise-defs/exercise-def"/>
+      <xs:field xpath="@id"/>
+    </xs:unique>
+
+    <!-- Every exercise-ref/@idref must point to an exercise-def/@id -->
+    <xs:key name="exerciseIdKey">
+      <xs:selector xpath="exercise-defs/exercise-def"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+    <xs:keyref name="exerciseRefKeyRef" refer="exerciseIdKey">
+      <xs:selector xpath="program/weeks/week/day/block/exercise-ref"/>
+      <xs:field xpath="@idref"/>
+    </xs:keyref>
+  </xs:element>
+  
+  <xs:complexType name ="ProgramLib">
+    <xs:sequence>
+      <xs:element name="exercise-defs">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="exercise-def" type="ExerciseDefType" minOccurs="1" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="program" type="ProgramType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>
