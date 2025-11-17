@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  - custom simple types with restriction (e.g., NonEmptyString, TempoType, IdType)
+  - custom simple types with restriction (NonEmptyString, TempoType, IdType)
   - a meaningful list type (MuscleListType) used as an optional element
   - complex types with simple content: derived by restriction (DurationSecondsType, LoadParamType, RestParamType)
   - complex types with simple content: derived by extension (AuthorType)
@@ -119,7 +119,7 @@
     </xs:simpleContent>
   </xs:complexType>
 
-  <!-- Derived by restriction from our own base (load param) -->
+  <!-- Derived by restriction from base (load param) -->
  <xs:complexType name="LoadParamType">
     <xs:simpleContent>
       <xs:restriction base="IntWithUnitType">
@@ -135,14 +135,14 @@
     </xs:simpleContent>
   </xs:complexType>
 
-  <!-- Derived by restriction from our own base (rest param) -->
+  <!-- Derived by restriction from base (rest param) -->
    <xs:complexType name="RestParamType">
     <xs:simpleContent>
       <xs:extension base="DurationSecondsType"/>
     </xs:simpleContent>
   </xs:complexType>
 
-  <!-- Derived by extension from our base (adds an optional attribute) -->
+  <!-- Derived by extension from base (adds an optional attribute) -->
   <xs:complexType name="AuthorType">
     <xs:simpleContent>
       <xs:extension base="NonEmptyString">
@@ -239,11 +239,11 @@
     </xs:complexContent>
   </xs:complexType>
 
-  <!-- Week types: show restriction principle by removing an optional element -->
+  <!-- Restriction principle by removing an optional element -->
   <xs:complexType name="WeekBaseType">
     <xs:sequence>
       <xs:element name="day" type="DayTypeExt" minOccurs="1" maxOccurs="7"/>
-      <!-- optional extras that we'll restrict away -->
+      <!-- optional extras that will be restricted away -->
       <xs:element name="extras" type="NonEmptyString" minOccurs="0"/>
     </xs:sequence>
     <xs:attribute name="number" type="xs:positiveInteger" use="required"/>
@@ -275,7 +275,7 @@
     </xs:sequence>
   </xs:complexType>
 
-  <!-- Metadata -->
+
   <xs:complexType name="MetadataType">
     <xs:sequence>
       <xs:element name="title">
@@ -301,7 +301,6 @@
       <xs:element name="parameters" type="ParametersType"/>
       <xs:element name="weeks" type="WeeksType"/>
       <xs:element name="scheduling" type="SchedulingType"/>
-      <!-- optional extra that gets restricted out -->
       <xs:element name="notes" type="NotesType" minOccurs="0"/>
     </xs:sequence>
     <xs:attribute name="id" type="ProgramIdType" use="required"/>
@@ -322,14 +321,7 @@
           <xs:element name="metadata" type="MetadataType"/>
           <xs:element name="parameters" type="ParametersType"/>
           <xs:element name="weeks" type="WeeksType"/>
-          <xs:element name="scheduling">
-            <xs:complexType>
-              <xs:sequence>
-                <xs:element name="start-date" type="xs:date"/>
-                <xs:element name="days-per-week" type="xs:positiveInteger"/>
-              </xs:sequence>
-            </xs:complexType>
-          </xs:element>
+          <xs:element name="scheduling" type ="SchedulingType"/>
         </xs:sequence>
         <xs:attribute name="id" type="ProgramIdType" use="required"/>
         <xs:attribute name="level" type="LevelType" use="required"/>
@@ -339,7 +331,6 @@
 
   <!-- root -->
   <xs:element name="program-library" type="ProgramLib">
-    <!-- Identity constraints -->
     <!-- Every exercise-def/@id is unique -->
     <xs:unique name="uniqueExerciseId">
       <xs:selector xpath="exercise-defs/exercise-def"/>
